@@ -89,7 +89,9 @@ If you're building something similar, or want to collaborate on productivity-foc
 
 You can contact me at:  
 Email Address: adiseeksagi@gmail.com
+<br>
 [Instagram](https://www.instagram.com/adiseeksagi/?hl=en) (preferred)
+<br>
 [Github](https://github.com/adiseeksagi)
 
 If this plugin helped streamline your workflow, consider leaving a review or star on the repo. It helps others discover it, and keeps the project going.
