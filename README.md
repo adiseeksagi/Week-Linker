@@ -77,6 +77,7 @@ These weekly notes gradually become high-level records of your life or work—he
 
 ## How I use it
 Here is a screenshot of my week page
+<br>
 ![My Workflow](<Screenshots/Week linker My workflow.png>)
 <br>
 This is what a typical weekly note looks like for me. I log my daily work, habits, and projects as the week unfolds, and by Sunday I just open this one file to review, reflect, and clean up anything left undone. It saves me the trouble of chasing down individual notes, and gives me a calm overview before starting the next week.
