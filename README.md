@@ -2,6 +2,9 @@
 **Week Linker** is an Obsidian plugin that automatically links each daily note to its corresponding weekly note. This creates a centralized weekly summary page where all your daily entries are aggregated for easy end-of-week review.
 
 The plugin was designed to streamline weekly reviews by providing a single location to view and reflect on all your work, tasks, and notes from the past seven days.
+## Pre-requisites
+You must have installed the core plugin Daily notes in your obsidian vault.
+
 ## Usage Instructions
 
 Once installed and enabled, the plugin automatically links your daily note to its corresponding weekly note. Whenever you create or open a daily note, the plugin checks whether it belongs to a specific week (based on date) and then inserts a link to it in that week's note. This helps create a clean log of your week across different daily entries.
