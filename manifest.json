@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "daily-to-weekly-linker",
+	"name": "Week Linker",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Links daily notes of the week to it's weekly note (for weekly review).",
+	"author": "Aditya Chauhan",
+	"authorUrl": "https://github.com/adiseeksagi",
+	"fundingUrl": "will add soon",
 	"isDesktopOnly": false
 }
