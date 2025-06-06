@@ -2,6 +2,9 @@
 **Week Linker** is an Obsidian plugin that automatically links each daily note to its corresponding weekly note. This creates a centralized weekly summary page where all your daily entries are aggregated for easy end-of-week review.
 
 The plugin was designed to streamline weekly reviews by providing a single location to view and reflect on all your work, tasks, and notes from the past seven days.
+## Pre-requisites
+You must have installed the core plugin Daily notes in your obsidian vault.
+
 ## Usage Instructions
 
 Once installed and enabled, the plugin automatically links your daily note to its corresponding weekly note. Whenever you create or open a daily note, the plugin checks whether it belongs to a specific week (based on date) and then inserts a link to it in that week's note. This helps create a clean log of your week across different daily entries.
@@ -77,7 +80,9 @@ These weekly notes gradually become high-level records of your life or work—he
 
 ## How I use it
 Here is a screenshot of my week page
+<br>
 ![My Workflow](<Screenshots/Week linker My workflow.png>)
+<br>
 This is what a typical weekly note looks like for me. I log my daily work, habits, and projects as the week unfolds, and by Sunday I just open this one file to review, reflect, and clean up anything left undone. It saves me the trouble of chasing down individual notes, and gives me a calm overview before starting the next week.
 
 You can use it your own way—some people use it for journaling, others for habit tracking or project logs. What matters is that everything is in one place when it’s time to review.
@@ -88,8 +93,9 @@ If you find Week Linker useful, I’d love to hear how you’re using it—and h
 If you're building something similar, or want to collaborate on productivity-focused Obsidian tools, feel free to reach out. I'm always open to exchanging ideas or working together.
 
 You can contact me at:  
-Email Address: adiseeksagi@gmail.com 
+Email Address: adiseeksagi@gmail.com
 [Instagram](https://www.instagram.com/adiseeksagi/?hl=en) (preferred)
+<br>
 [Github](https://github.com/adiseeksagi)
 
 If this plugin helped streamline your workflow, consider leaving a review or star on the repo. It helps others discover it, and keeps the project going.
