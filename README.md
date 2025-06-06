@@ -88,7 +88,7 @@ If you find Week Linker useful, I’d love to hear how you’re using it—and h
 If you're building something similar, or want to collaborate on productivity-focused Obsidian tools, feel free to reach out. I'm always open to exchanging ideas or working together.
 
 You can contact me at:  
-Email Address: adiseeksagi@gmail.com
+Email Address: adiseeksagi@gmail.com 
 [Instagram](https://www.instagram.com/adiseeksagi/?hl=en) (preferred)
 [Github](https://github.com/adiseeksagi)
 

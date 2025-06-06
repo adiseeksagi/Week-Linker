@@ -1,8 +1,33 @@
 /*
+ * styles.css for the Weekly Notes Linker Plugin
+ *
+ * This stylesheet defines the appearance for custom UI elements in the plugin's
+ * settings tab, ensuring they are consistent with the user's active Obsidian theme.
+ */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/*
+ * Styles for the live preview text that appears below certain format settings.
+ *
+ * - Uses --text-muted for a standard, less prominent color that fits all themes.
+ * - Uses --font-ui-smaller for a slightly smaller font size, typical for helper text.
+ * - Provides spacing from the setting input above it.
+ */
+.weekly-notes-setting-preview {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-style: italic;
+  margin-top: 5px;
+}
 
-If your plugin does not need CSS, delete this file.
-
-*/
+/*
+ * An additional class applied when a format string is invalid and the preview
+ * cannot be generated.
+ *
+ * - Overrides the color to use Obsidian's standard variable for error text.
+ * - This class is toggled via JavaScript and is not applied by default.
+ */
+.weekly-notes-setting-preview-error {
+  color: var(--text-error);
+  font-style: normal; /* Errors are often better read without italics */
+  font-weight: 500;
+}

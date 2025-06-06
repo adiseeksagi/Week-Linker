@@ -24,9 +24,9 @@ interface WeeklyNotesSettings {
     autoProcessOnStartup: boolean;
     debounceDelay: number;
     runBackfillOnNextStartup: boolean;
-    weeklyNoteLinksSectionHeading: string; 
-    linksStartDelimiter: string; 
-    linksEndDelimiter: string;   
+    weeklyNoteLinksSectionHeading: string;
+    linksStartDelimiter: string;
+    linksEndDelimiter: string;
 }
 
 const DEFAULT_SETTINGS: WeeklyNotesSettings = {
@@ -35,15 +35,15 @@ const DEFAULT_SETTINGS: WeeklyNotesSettings = {
     weeklyNoteFolderPath: "{{GGGG}}/Weekly/",
     weeklyNoteFilenameFormat: "{{GGGG}}-W{{WW}}.md",
     weeklyNoteHeadingFormat: "# Week {{W}} ({{MMMM D}} to {{MMMM D, add=6,days}})",
-    weeklyNoteLinkFormat: "- ![[{{basename}}]]", // NO leading \n here
+    weeklyNoteLinkFormat: "- ![[{{basename}}]]",
     ensureWeeklyNoteHeadingExists: true,
     autoProcessOnCreate: true,
     autoProcessOnStartup: false,
     debounceDelay: 1500,
     runBackfillOnNextStartup: false,
-    weeklyNoteLinksSectionHeading: "## Daily Notes", // Default to a section heading
-    linksStartDelimiter: "",
-    linksEndDelimiter: "",
+    weeklyNoteLinksSectionHeading: "## Daily Notes",
+    linksStartDelimiter: "<!-- DAILY LINKS START -->",
+    linksEndDelimiter: "<!-- DAILY LINKS END -->",
 };
 
 // --- Utility Functions ---
@@ -90,7 +90,7 @@ export default class WeeklyNotesPluginV2 extends Plugin {
 
     async onload() {
         await this.loadSettings();
-        console.log('Loading Weekly Notes Plugin (Robust Delimited Blocks)');
+        console.log('Loading Weekly Notes Plugin (PR Feedback Fixes)');
 
         this.dateLogicService = new DateLogicService(this.settings);
         this.vaultInteractionService = new VaultInteractionService(this.app, this.settings, this.dateLogicService);
@@ -158,8 +158,8 @@ export default class WeeklyNotesPluginV2 extends Plugin {
         });
 
         this.addCommand({
-            id: 'force-backfill-weekly-notes-robust-delimited',
-            name: 'Backfill all daily notes to weekly notes (Robust Delimited)',
+            id: 'force-backfill-weekly-notes-safe',
+            name: 'Backfill all daily notes to weekly notes (Safe)',
             callback: async () => {
                 const notice = new Notice("Weekly Notes: Manual backfill initiated. This may take some time...", 0);
                 try {
@@ -174,8 +174,8 @@ export default class WeeklyNotesPluginV2 extends Plugin {
         });
         
         this.addCommand({
-            id: 'process-current-daily-note-to-weekly-robust-delimited',
-            name: "Process current daily note for weekly linking (Robust Delimited)",
+            id: 'process-current-daily-note-to-weekly-safe',
+            name: "Process current daily note for weekly linking (Safe)",
             checkCallback: (checking: boolean) => {
                 const currentFile = this.app.workspace.getActiveFile();
                 if (currentFile) {
@@ -250,7 +250,7 @@ export default class WeeklyNotesPluginV2 extends Plugin {
     }
 
     onunload() {
-        console.log('Unloading Weekly Notes Plugin (Robust Delimited Blocks)');
+        console.log('Unloading Weekly Notes Plugin');
     }
 
     async loadSettings() {
@@ -336,10 +336,7 @@ class VaultInteractionService {
     private app: App;
     private settings: WeeklyNotesSettings;
     private dateLogicService: DateLogicService;
-    // Regex to find daily note links, capturing the basename.
-    // Adjusted to be less strict about line start/end within the block for extraction.
     private readonly dailyLinkExtractionRegex = /!\[\[([^|\]]+?)(\.md)?([|\]][^\]]*)?\]\]/g;
-
 
     constructor(app: App, settings: WeeklyNotesSettings, dateLogicService: DateLogicService) {
         this.app = app;
@@ -357,10 +354,9 @@ class VaultInteractionService {
         const { linksStartDelimiter: START, linksEndDelimiter: END } = this.settings;
         if (!START || !END) {
             new Notice("Weekly Notes: Delimiters for links block are not configured. Please set them in settings.", 0);
-            return false; // Cannot operate without delimiters for this robust logic
+            return false;
         }
 
-        // --- Ensure Folder & File Path Validity ---
         const weeklyNoteFolderPath = weeklyNotePath.substring(0, weeklyNotePath.lastIndexOf('/'));
         const weeklyFolderAbstract = this.app.vault.getAbstractFileByPath(weeklyNoteFolderPath);
         if (weeklyFolderAbstract && weeklyFolderAbstract instanceof TFile) {
@@ -374,7 +370,6 @@ class VaultInteractionService {
             new Notice(`Weekly Notes Error: Path "${weeklyNotePath}" is a folder.`, 0); return false;
         }
 
-        // --- Read or Create Weekly Note ---
         let rawContent = "";
         const mainHeadingText = this.dateLogicService.getWeeklyNoteHeading(dailyNoteDate);
         let mainHeadingPresentInOriginal = false;
@@ -384,10 +379,10 @@ class VaultInteractionService {
             if (this.settings.weeklyNoteLinksSectionHeading) {
                 rawContent += "\n" + this.settings.weeklyNoteLinksSectionHeading + "\n";
             }
-            rawContent += "\n" + START + "\n" + END + "\n"; // Add empty delimited block
+            rawContent += "\n" + START + "\n" + END + "\n";
             weeklyNoteFile = await this.app.vault.create(weeklyNotePath, rawContent);
             new Notice(`Weekly Notes: Created "${weeklyNotePath}".`, 3000);
-            mainHeadingPresentInOriginal = true; // It was just added
+            mainHeadingPresentInOriginal = true;
         } else if (weeklyNoteFile instanceof TFile) {
             rawContent = await this.app.vault.cachedRead(weeklyNoteFile);
             mainHeadingPresentInOriginal = rawContent.includes(mainHeadingText.trim().split('\n')[0]);
@@ -396,7 +391,6 @@ class VaultInteractionService {
         }
         if (!(weeklyNoteFile instanceof TFile)) return false;
 
-        // --- Locate Delimited Block ---
         const blockRegex = new RegExp(
             `^([\\s\\S]*?)(${this.escapeRegexForDelimiters(START)})\\n?([\\s\\S]*?)\\n?(${this.escapeRegexForDelimiters(END)})([\\s\\S]*)$`, "m"
         );
@@ -409,127 +403,95 @@ class VaultInteractionService {
         if (match) {
             hasBlock = true;
             contentBeforeBlock = match[1];
-            // content of START delimiter itself is match[2]
             currentLinksBlockContent = match[3];
-            // content of END delimiter itself is match[4]
             contentAfterBlock = match[5];
-        } else {
-            // No delimiters found: we'll need to insert the block.
-            // The "before" content will be determined by where we insert.
-            // For now, assume we might insert it after a section heading or main heading.
         }
 
-        // --- Parse Existing Links from the Block ---
         const existingBasenamesMap = new Map<string, moment.Moment>();
         if (hasBlock) {
             let linkMatch;
-            this.dailyLinkExtractionRegex.lastIndex = 0; // Reset regex state for global regex
+            this.dailyLinkExtractionRegex.lastIndex = 0;
             while ((linkMatch = this.dailyLinkExtractionRegex.exec(currentLinksBlockContent)) !== null) {
-                const basename = linkMatch[1]; // Capture group 1 is the basename
-                const date = this.dateLogicService.getDailyNoteDateFromPath(basename, basename); // Try to parse date
+                const basename = linkMatch[1];
+                const date = this.dateLogicService.getDailyNoteDateFromPath(basename, basename);
                 if (date) {
                     existingBasenamesMap.set(basename, date);
                 } else {
-                    existingBasenamesMap.set(basename, moment(0)); // Fallback for unparsable for sorting
+                    existingBasenamesMap.set(basename, moment(0));
                     console.warn(`Weekly Notes: Could not parse date for sorting from existing link: ${basename} in ${weeklyNotePath}`);
                 }
             }
         }
         
-        // --- If Already Linked (and no other changes needed to the block like sorting), Bail Out ---
-        // This check is now more nuanced: if the link exists AND the block is already perfectly sorted AND formatted,
-        // then we might bail. For simplicity of this refactor, we'll rebuild if the new link isn't there,
-        // or if it is there but the overall block might need re-sorting/re-formatting.
-        // The critical check is if the *new* link is already present.
         const newLinkAlreadyExists = existingBasenamesMap.has(dailyFileBasename);
-
-        // Add the new link to the map (or update its date if it somehow existed with a different one)
         existingBasenamesMap.set(dailyFileBasename, dailyNoteDate);
 
-        // --- Sort All Links by Date ---
         const sortedBasenames = Array.from(existingBasenamesMap.entries())
             .sort(([, dateA], [, dateB]) => dateA.valueOf() - dateB.valueOf())
             .map(([basename]) => basename);
 
-        // --- Rebuild the Block Text ---
         const newLinksBlockLines = sortedBasenames.map(basename => {
-            // Use the date associated with this specific basename for context if needed in link format
-            const dateForThisLink = existingBasenamesMap.get(basename) || dailyNoteDate; // Should always find in map
+            const dateForThisLink = existingBasenamesMap.get(basename) || dailyNoteDate;
             let linkLine = this.settings.weeklyNoteLinkFormat.replace(/\{\{basename\}\}/g, basename);
             return formatDateWithCustomTokens(linkLine, dateForThisLink);
         });
         const newLinksBlockText = newLinksBlockLines.join('\n');
 
-        // --- If the new link was already there AND the block content hasn't changed by sorting, no need to write ---
         if (newLinkAlreadyExists && hasBlock && currentLinksBlockContent.trim() === newLinksBlockText.trim()) {
-            // console.log(`Weekly Notes: Link for ${dailyFileBasename} already exists and block is sorted/formatted in ${weeklyNotePath}.`);
-            // Check if main heading needs to be added, even if links are fine
             if (this.settings.ensureWeeklyNoteHeadingExists && !mainHeadingPresentInOriginal) {
                  const updatedContentWithHeading = mainHeadingText + "\n" + rawContent;
                  if (rawContent.trim() !== updatedContentWithHeading.trim()){
                     await this.app.vault.modify(weeklyNoteFile, updatedContentWithHeading);
-                    return true; // File was modified for heading
+                    return true;
                  }
             }
-            return false; // No changes needed
+            return false;
         }
 
-
-        // --- Reassemble File Content ---
         let updatedFileContent: string;
-
-        // Ensure main heading is present if configured
         let finalContentBeforeBlock = hasBlock ? contentBeforeBlock : rawContent;
         if (this.settings.ensureWeeklyNoteHeadingExists && !mainHeadingPresentInOriginal) {
-            // If adding heading to a file that had a block, need to be careful
             if (hasBlock) {
-                // This case is complex: heading missing but block exists.
-                // Simplest: prepend heading to `contentBeforeBlock`
                 finalContentBeforeBlock = mainHeadingText + "\n" + contentBeforeBlock;
             } else {
-                // No block, just prepend heading to whatever rawContent was
                 finalContentBeforeBlock = mainHeadingText + "\n" + rawContent;
             }
         }
 
-
         if (hasBlock) {
-            updatedFileContent = finalContentBeforeBlock + // Already includes content before START
+            updatedFileContent = finalContentBeforeBlock +
                                START + '\n' +
                                newLinksBlockText + 
-                               (newLinksBlockText.length > 0 ? '\n' : '') + // Add newline if block has content
+                               (newLinksBlockText.length > 0 ? '\n' : '') +
                                END +
                                contentAfterBlock;
         } else {
-            // Delimiters were not found, insert them and the new links block.
             let insertionPoint = -1;
-            let contentToInsertInto = finalContentBeforeBlock; // Start with potentially heading-adjusted content
+            let contentToInsertInto = finalContentBeforeBlock; 
 
             if (this.settings.weeklyNoteLinksSectionHeading) {
                 const sectionHeadingRegex = new RegExp(`^${escapeRegExp(this.settings.weeklyNoteLinksSectionHeading.trim())}(\r?\n|$)`, "m");
                 const sectionMatch = sectionHeadingRegex.exec(contentToInsertInto);
                 if (sectionMatch) {
-                    insertionPoint = sectionMatch.index + sectionMatch[0].length; // After the section heading line
+                    insertionPoint = sectionMatch.index + sectionMatch[0].length;
                 } else {
-                    // Section heading not found, append it, then the delimiters and block
                     contentToInsertInto += (contentToInsertInto.endsWith('\n') ? '' : '\n') + 
-                                           (contentToInsertInto.trim() === "" ? "" : "\n") + // Add extra newline if content exists
+                                           (contentToInsertInto.trim() === "" ? "" : "\n") + 
                                            this.settings.weeklyNoteLinksSectionHeading + '\n';
-                    insertionPoint = contentToInsertInto.length; // End of the newly added heading
+                    insertionPoint = contentToInsertInto.length; 
                 }
             } else if (mainHeadingPresentInOriginal || (this.settings.ensureWeeklyNoteHeadingExists && !mainHeadingPresentInOriginal)) {
-                 // Insert after the main heading if no specific section heading
                  const firstLineEnd = contentToInsertInto.indexOf('\n');
                  if (firstLineEnd !== -1) {
-                    insertionPoint = firstLineEnd + 1; // After the first line (main heading)
+                    insertionPoint = firstLineEnd + 1;
                  } else {
-                    insertionPoint = contentToInsertInto.length; // Append if only one line (main heading only)
+                    insertionPoint = contentToInsertInto.length;
                  }
             } else {
-                insertionPoint = contentToInsertInto.length; // Fallback: append to end of whatever content is there
+                insertionPoint = contentToInsertInto.length;
             }
             
-            const blockToInsert = (insertionPoint > 0 && !contentToInsertInto.substring(0, insertionPoint).endsWith('\n\n') && !contentToInsertInto.substring(0, insertionPoint).endsWith('\n') ? '\n' : '') + // Ensure separation
+            const blockToInsert = (insertionPoint > 0 && !contentToInsertInto.substring(0, insertionPoint).endsWith('\n\n') && !contentToInsertInto.substring(0, insertionPoint).endsWith('\n') ? '\n' : '') +
                                  START + '\n' +
                                  newLinksBlockText +
                                  (newLinksBlockText.length > 0 ? '\n' : '') +
@@ -540,9 +502,8 @@ class VaultInteractionService {
                                  contentToInsertInto.substring(insertionPoint);
         }
         
-        updatedFileContent = updatedFileContent.replace(/\r\n/g, '\n').trimEnd() + '\n'; // Normalize and ensure trailing newline
+        updatedFileContent = updatedFileContent.replace(/\r\n/g, '\n').trimEnd() + '\n';
         const normalizedRawContent = rawContent.replace(/\r\n/g, '\n').trimEnd() + '\n';
-
 
         if (normalizedRawContent !== updatedFileContent) {
             await this.app.vault.modify(weeklyNoteFile, updatedFileContent);
@@ -567,12 +528,7 @@ class VaultInteractionService {
         );
         const match = blockRegex.exec(rawContent);
 
-        if (!match) {
-            // console.log(`Weekly Notes: Delimiters not found in ${weeklyNotePath}. Cannot remove link precisely.`);
-            // Optionally, could fall back to a more naive global search and replace, but this is risky.
-            // For now, if delimiters aren't found, we don't touch the file for removal.
-            return;
-        }
+        if (!match) return;
 
         const contentBeforeBlock = match[1];
         const currentLinksBlockContent = match[3];
@@ -583,19 +539,15 @@ class VaultInteractionService {
         this.dailyLinkExtractionRegex.lastIndex = 0; 
         while ((linkMatch = this.dailyLinkExtractionRegex.exec(currentLinksBlockContent)) !== null) {
             const basename = linkMatch[1];
-            if (basename !== dailyFileBasenameToRemove) { // Exclude the one to remove
+            if (basename !== dailyFileBasenameToRemove) {
                 const date = this.dateLogicService.getDailyNoteDateFromPath(basename, basename);
                 if (date) existingBasenamesMap.set(basename, date);
                 else existingBasenamesMap.set(basename, moment(0));
             }
         }
 
-        // Check if any link was actually removed by comparing sizes
         const initialLinkCountInBlock = (currentLinksBlockContent.match(this.dailyLinkExtractionRegex) || []).length;
-        if (existingBasenamesMap.size === initialLinkCountInBlock && initialLinkCountInBlock > 0) {
-            // console.log(`Weekly Notes: Link for ${dailyFileBasenameToRemove} not found within delimited block of ${weeklyNotePath}.`);
-            return; // No change needed
-        }
+        if (existingBasenamesMap.size === initialLinkCountInBlock && initialLinkCountInBlock > 0) return;
         
         const sortedBasenames = Array.from(existingBasenamesMap.entries())
             .sort(([, dateA], [, dateB]) => dateA.valueOf() - dateB.valueOf())
@@ -635,23 +587,28 @@ class WeeklyNotesSettingTabV2 extends PluginSettingTab {
     }
     
     private generatePreview(settingKey: 'weeklyNoteFolderPath' | 'weeklyNoteFilenameFormat' | 'weeklyNoteHeadingFormat') {
-        if (!this.previewElements[settingKey]) return;
+        const previewEl = this.previewElements[settingKey];
+        if (!previewEl) return;
+
         const formatString = this.plugin.settings[settingKey];
         const sampleDate = moment(); 
+        
+        // Use toggleClass for safer style manipulation
+        previewEl.toggleClass('weekly-notes-setting-preview-error', false);
+
         try {
             const previewText = formatDateWithCustomTokens(formatString, sampleDate);
-            this.previewElements[settingKey].setText(`Preview: ${previewText}`);
-            this.previewElements[settingKey].style.color = 'var(--text-normal)';
+            previewEl.setText(`Preview: ${previewText}`);
         } catch (e) {
-            this.previewElements[settingKey].setText(`Preview Error: Invalid format. ${e.message}`);
-            this.previewElements[settingKey].style.color = 'var(--text-error)';
+            previewEl.setText(`Preview Error: Invalid format token. ${e.message}`);
+            previewEl.toggleClass('weekly-notes-setting-preview-error', true);
         }
     }
 
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-        containerEl.createEl('h2', { text: 'Week Linker Settings' });
+        containerEl.createEl('h2', { text: 'Weekly Notes Linker Settings' });
 
         containerEl.createEl('h3', { text: 'Daily Note Identification' });
         new Setting(containerEl)
@@ -668,19 +625,19 @@ class WeeklyNotesSettingTabV2 extends PluginSettingTab {
             .setName('Weekly Notes Folder Path').setDesc('Path for weekly notes. Supports Moment.js tokens (e.g., {{GGGG}}/Weekly/). Ends with /.')
             .addText(text => text.setPlaceholder('{{GGGG}}/Weekly/').setValue(this.plugin.settings.weeklyNoteFolderPath)
                 .onChange(async (value) => { this.plugin.settings.weeklyNoteFolderPath = normalizePath(value.endsWith('/') ? value : `${value}/`); await this.plugin.saveSettings(); this.generatePreview('weeklyNoteFolderPath'); }));
-        this.previewElements['weeklyNoteFolderPath'] = weeklyFolderSetting.controlEl.createDiv({ cls: 'setting-item-description setting-item-preview' }); this.generatePreview('weeklyNoteFolderPath');
+        this.previewElements['weeklyNoteFolderPath'] = weeklyFolderSetting.controlEl.createDiv({ cls: 'setting-item-description weekly-notes-setting-preview' }); this.generatePreview('weeklyNoteFolderPath');
 
         const weeklyFilenameSetting = new Setting(containerEl)
             .setName('Weekly Note Filename Format').setDesc('Filename for weekly notes. Supports Moment.js tokens.')
             .addText(text => text.setPlaceholder('{{GGGG}}-W{{WW}}.md').setValue(this.plugin.settings.weeklyNoteFilenameFormat)
                 .onChange(async (value) => { this.plugin.settings.weeklyNoteFilenameFormat = value; await this.plugin.saveSettings(); this.generatePreview('weeklyNoteFilenameFormat'); }));
-        this.previewElements['weeklyNoteFilenameFormat'] = weeklyFilenameSetting.controlEl.createDiv({ cls: 'setting-item-description setting-item-preview' }); this.generatePreview('weeklyNoteFilenameFormat');
+        this.previewElements['weeklyNoteFilenameFormat'] = weeklyFilenameSetting.controlEl.createDiv({ cls: 'setting-item-description weekly-notes-setting-preview' }); this.generatePreview('weeklyNoteFilenameFormat');
 
         const weeklyHeadingSetting = new Setting(containerEl)
             .setName('Weekly Note Heading Format').setDesc('Heading for new weekly notes. Supports Moment.js tokens and operations.')
             .addText(text => text.setPlaceholder('# Week {{W}} ({{MMM D}} to {{MMM D, add=6,days}})').setValue(this.plugin.settings.weeklyNoteHeadingFormat)
                 .onChange(async (value) => { this.plugin.settings.weeklyNoteHeadingFormat = value; await this.plugin.saveSettings(); this.generatePreview('weeklyNoteHeadingFormat'); }));
-        this.previewElements['weeklyNoteHeadingFormat'] = weeklyHeadingSetting.controlEl.createDiv({ cls: 'setting-item-description setting-item-preview' }); this.generatePreview('weeklyNoteHeadingFormat');
+        this.previewElements['weeklyNoteHeadingFormat'] = weeklyHeadingSetting.controlEl.createDiv({ cls: 'setting-item-description weekly-notes-setting-preview' }); this.generatePreview('weeklyNoteHeadingFormat');
 
         new Setting(containerEl)
             .setName('Daily Note Link Format').setDesc('Format for EACH daily note link line (e.g., "- ![[{{basename}}]]"). Newlines are added between links by the plugin.')
@@ -724,6 +681,15 @@ class WeeklyNotesSettingTabV2 extends PluginSettingTab {
                 .onChange(async (value) => { this.plugin.settings.runBackfillOnNextStartup = value; await this.plugin.saveSettings(); }));
         
         containerEl.createEl('p', { text: 'Use commands for immediate backfill. Moment.js tokens are supported in formats.'});
-        containerEl.createEl('p').innerHTML = 'Refer to <a href="https://momentjs.com/docs/#/displaying/format/" target="_blank">Moment.js documentation</a> for tokens.';
+        
+        // --- FIX FOR innerHTML: Use safe DOM API ---
+        const docsEl = containerEl.createEl('p');
+        docsEl.appendText('Refer to ');
+        docsEl.createEl('a', {
+            text: 'Moment.js documentation',
+            href: 'https://momentjs.com/docs/#/displaying/format/',
+            attr: { 'target': '_blank', 'rel': 'noopener noreferrer' }
+        });
+        docsEl.appendText(' for all available format tokens.');
     }
 }
