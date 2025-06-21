@@ -1,7 +1,7 @@
 {
 	"id": "daily-to-weekly-linker",
 	"name": "Week Linker",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"minAppVersion": "0.15.0",
 	"description": "Links daily notes of the week to it's weekly note (for weekly review).",
 	"author": "Aditya Chauhan",
